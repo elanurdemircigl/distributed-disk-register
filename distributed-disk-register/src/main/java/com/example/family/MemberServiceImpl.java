@@ -5,6 +5,10 @@ import com.hatokuse.grpc.MessageRequest;
 import com.hatokuse.grpc.MessageResponse;
 import io.grpc.stub.StreamObserver;
 
+import com.hatokuse.grpc.RetrieveRequest;
+import com.hatokuse.grpc.RetrieveResponse;
+
+
 public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
 
     private final DiskStorage diskStorage;
@@ -37,4 +41,36 @@ public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
             responseObserver.onCompleted();
         }
     }
+
+    @Override
+    public void retrieveMessage(RetrieveRequest request,
+                                StreamObserver<RetrieveResponse> responseObserver) {
+        try {
+            int id = request.getId();
+            String content = diskStorage.read(id);
+
+            if (content == null) {
+                responseObserver.onNext(RetrieveResponse.newBuilder()
+                        .setFound(false)
+                        .setContent("")
+                        .setMessage("NOT_FOUND")
+                        .build());
+            } else {
+                responseObserver.onNext(RetrieveResponse.newBuilder()
+                        .setFound(true)
+                        .setContent(content)
+                        .setMessage("OK")
+                        .build());
+            }
+        } catch (Exception e) {
+            responseObserver.onNext(RetrieveResponse.newBuilder()
+                    .setFound(false)
+                    .setContent("")
+                    .setMessage("ERROR: " + e.getMessage())
+                    .build());
+        } finally {
+            responseObserver.onCompleted();
+        }
+    }
+
 }

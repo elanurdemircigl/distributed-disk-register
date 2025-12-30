@@ -8,6 +8,7 @@ option java_outer_classname = "HatokuseProto";
 service MemberService {
   // Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
   rpc StoreMessage (MessageRequest) returns (MessageResponse) {}
+  rpc RetrieveMessage (RetrieveRequest) returns (RetrieveResponse) {}
 }
 
 // Liderin gönderdiği mesaj paketi
@@ -21,4 +22,14 @@ message MessageRequest {
 message MessageResponse {
   bool success = 1;   // Kayıt başarılı mı?
   string message = 2; // Hata varsa açıklaması, yoksa "OK"
+}
+
+message RetrieveRequest {
+  int32 id = 1;
+}
+
+message RetrieveResponse {
+  bool found = 1;
+  string content = 2;
+  string message = 3; // "OK" / "NOT_FOUND" / "ERROR: ..."
 }

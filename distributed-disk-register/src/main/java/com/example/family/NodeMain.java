@@ -28,6 +28,8 @@ import com.hatokuse.grpc.MemberServiceGrpc;
 import com.hatokuse.grpc.MessageRequest;
 import com.hatokuse.grpc.MessageResponse;
 
+import com.hatokuse.grpc.RetrieveRequest;
+import com.hatokuse.grpc.RetrieveResponse;
 
 
 public class NodeMain {
@@ -116,6 +118,13 @@ private static void handleClientTextConnection(Socket client,
             // Kendi üstüne de yaz
             System.out.println("📝 Received from TCP: " + text);
             String result = commandParser.parseAndExecute(text);
+            if (text.toUpperCase().startsWith("GET ") && "NOT_FOUND".equals(result)) {
+                String fallback = tryRetrieveFromMembers(text, registry, self);
+                if (fallback != null) {
+                    result = fallback;
+                }
+            }
+
             if (text.toUpperCase().startsWith("SET ")) {
                 replicateToMembers(text, registry, self);
             }
@@ -338,5 +347,52 @@ private static void broadcastToFamily(NodeRegistry registry,
             }
         }
     }
+
+    private static String tryRetrieveFromMembers(String command,
+                                                 NodeRegistry registry,
+                                                 NodeInfo self) {
+        String[] parts = command.trim().split("\\s+");
+        if (parts.length < 2) return null;
+
+        int id;
+        try {
+            id = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+
+        for (NodeInfo n : registry.snapshot()) {
+            if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) continue;
+
+            ManagedChannel channel = null;
+            try {
+                channel = ManagedChannelBuilder
+                        .forAddress(n.getHost(), n.getPort())
+                        .usePlaintext()
+                        .build();
+
+                MemberServiceGrpc.MemberServiceBlockingStub stub =
+                        MemberServiceGrpc.newBlockingStub(channel);
+
+                RetrieveRequest req = RetrieveRequest.newBuilder()
+                        .setId(id)
+                        .build();
+
+                RetrieveResponse res = stub.retrieveMessage(req);
+
+                if (res.getFound()) {
+                    System.out.printf("GET %d found at %s:%d%n", id, n.getHost(), n.getPort());
+                    return res.getContent();
+                }
+            } catch (Exception e) {
+                System.err.printf("GET fallback failed from %s:%d (%s)%n",
+                        n.getHost(), n.getPort(), e.getMessage());
+            } finally {
+                if (channel != null) channel.shutdownNow();
+            }
+        }
+        return null;
+    }
+
 
 }

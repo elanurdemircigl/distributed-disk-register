@@ -12,6 +12,10 @@
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/MessageRequestOrBuilder.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/MessageResponse.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/MessageResponseOrBuilder.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/RetrieveRequest.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/RetrieveRequestOrBuilder.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/RetrieveResponse.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/com/hatokuse/grpc/RetrieveResponseOrBuilder.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/family/ChatMessage.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/family/ChatMessageOrBuilder.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/java/family/Empty.java
