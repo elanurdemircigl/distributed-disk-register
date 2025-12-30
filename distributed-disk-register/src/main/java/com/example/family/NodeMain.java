@@ -21,10 +21,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.*;
 
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+
+
 public class NodeMain {
 
     private static final int START_PORT = 5555;
     private static final int PRINT_INTERVAL_SECONDS = 10;
+
+    private static final DiskStorage diskStorage = new DiskStorage();
+    private static final CommandParser commandParser = new CommandParser(diskStorage);
+
 
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
@@ -84,8 +92,13 @@ private static void handleClientTextConnection(Socket client,
                                                NodeRegistry registry,
                                                NodeInfo self) {
     System.out.println("New TCP client connected: " + client.getRemoteSocketAddress());
-    try (BufferedReader reader = new BufferedReader(
-            new InputStreamReader(client.getInputStream()))) {
+    try (
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(client.getInputStream()));
+        BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(client.getOutputStream()))
+    ) {
+
 
         String line;
         while ((line = reader.readLine()) != null) {
@@ -96,6 +109,14 @@ private static void handleClientTextConnection(Socket client,
 
             // Kendi üstüne de yaz
             System.out.println("📝 Received from TCP: " + text);
+            String result = commandParser.parseAndExecute(text);
+            System.out.println("➡️ Command result: " + result);
+            writer.write(result);
+            writer.newLine();
+            writer.flush();
+
+
+
 
             ChatMessage msg = ChatMessage.newBuilder()
                     .setText(text)
