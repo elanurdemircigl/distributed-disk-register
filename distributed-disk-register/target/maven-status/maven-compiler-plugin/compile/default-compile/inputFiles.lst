@@ -1,6 +1,8 @@
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/Command.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/CommandParser.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/DiskStorage.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/FamilyServiceImpl.java
+/Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/MemberServiceImpl.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/NodeMain.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/src/main/java/com/example/family/NodeRegistry.java
 /Users/bensukeskin/Desktop/distributed-disk-register/distributed-disk-register/target/generated-sources/protobuf/grpc-java/com/hatokuse/grpc/MemberServiceGrpc.java
