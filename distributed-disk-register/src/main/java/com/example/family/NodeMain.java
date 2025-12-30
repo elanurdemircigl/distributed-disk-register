@@ -24,6 +24,11 @@ import java.util.concurrent.*;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 
+import com.hatokuse.grpc.MemberServiceGrpc;
+import com.hatokuse.grpc.MessageRequest;
+import com.hatokuse.grpc.MessageResponse;
+
+
 
 public class NodeMain {
 
@@ -49,6 +54,7 @@ public class NodeMain {
         Server server = ServerBuilder
                 .forPort(port)
                 .addService(service)
+                .addService(new MemberServiceImpl(diskStorage))
                 .build()
                 .start();
 
@@ -110,6 +116,9 @@ private static void handleClientTextConnection(Socket client,
             // Kendi üstüne de yaz
             System.out.println("📝 Received from TCP: " + text);
             String result = commandParser.parseAndExecute(text);
+            if (text.toUpperCase().startsWith("SET ")) {
+                replicateToMembers(text, registry, self);
+            }
             System.out.println("➡️ Command result: " + result);
             writer.write(result);
             writer.newLine();
@@ -273,5 +282,61 @@ private static void broadcastToFamily(NodeRegistry registry,
 
     }, 5, 10, TimeUnit.SECONDS); // 5 sn sonra başla, 10 sn'de bir kontrol et
 }
+    private static void replicateToMembers(String command,
+                                           NodeRegistry registry,
+                                           NodeInfo self) {
+
+        // SET <id> <msg> formatı bekliyoruz
+        String[] parts = command.trim().split("\\s+", 3);
+        if (parts.length < 3) {
+            return;
+        }
+
+        int id;
+        try {
+            id = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            return; // CommandParser zaten ERROR döndürür, burada sadece replikasyon yapmayız
+        }
+
+        String content = parts[2];
+        long ts = System.currentTimeMillis();
+
+        for (NodeInfo n : registry.snapshot()) {
+
+            // Kendimize yollama
+            if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) {
+                continue;
+            }
+
+            ManagedChannel channel = null;
+            try {
+                channel = ManagedChannelBuilder
+                        .forAddress(n.getHost(), n.getPort())
+                        .usePlaintext()
+                        .build();
+
+                MemberServiceGrpc.MemberServiceBlockingStub stub =
+                        MemberServiceGrpc.newBlockingStub(channel);
+
+                MessageRequest req = MessageRequest.newBuilder()
+                        .setId(id)
+                        .setContent(content)
+                        .setTimestamp(ts)
+                        .build();
+
+                MessageResponse res = stub.storeMessage(req);
+
+                System.out.printf("Replicated SET %d to %s:%d -> %s%n",
+                        id, n.getHost(), n.getPort(), res.getMessage());
+
+            } catch (Exception e) {
+                System.err.printf("Replication failed to %s:%d (%s)%n",
+                        n.getHost(), n.getPort(), e.getMessage());
+            } finally {
+                if (channel != null) channel.shutdownNow();
+            }
+        }
+    }
 
 }
