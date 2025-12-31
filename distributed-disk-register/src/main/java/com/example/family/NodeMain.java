@@ -1,5 +1,8 @@
 package com.example.family;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 import family.Empty;
 import family.FamilyServiceGrpc;
 import family.FamilyView;
@@ -33,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 
+@SpringBootApplication
 public class NodeMain {
 
     private static final int START_PORT = 5555;
@@ -47,6 +51,10 @@ public class NodeMain {
     private static final AtomicInteger loadBalancerCounter = new AtomicInteger(0);
 
     public static void main(String[] args) throws Exception {
+        // --- Spring Boot Başlatıcısı (Eklendi) ---
+        // Bu satır olmazsa JAR dosyası "no main manifest attribute" hatası verir.
+        SpringApplication.run(NodeMain.class, args);
+
         String host = "127.0.0.1";
         int port = findFreePort(START_PORT);
 
@@ -133,13 +141,6 @@ public class NodeMain {
                             result = fallback;
                         }
                     }
-                }
-
-                // --- Replikasyon ve Broadcast ---
-                // Eğer SET başarılı olduysa ChatMessage olarak yayınla
-                if (text.toUpperCase().startsWith("SET ") && "OK".equals(result)) {
-                    // Not: Replikasyon istenirse burada handle edilebilir.
-                    // Şu an Load Balancer sadece tek bir node'a atıyor.
                 }
 
                 System.out.println("➡️ Command result: " + result);
