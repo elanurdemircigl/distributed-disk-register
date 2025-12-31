@@ -8,6 +8,9 @@ import io.grpc.stub.StreamObserver;
 import com.hatokuse.grpc.RetrieveRequest;
 import com.hatokuse.grpc.RetrieveResponse;
 
+import com.hatokuse.grpc.CountRequest;
+import com.hatokuse.grpc.CountResponse;
+
 
 public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
 
@@ -71,6 +74,14 @@ public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
         } finally {
             responseObserver.onCompleted();
         }
+    }
+
+    @Override
+    public void getLocalCount(CountRequest request,
+                              StreamObserver<CountResponse> responseObserver) {
+        int c = diskStorage.countMessages();
+        responseObserver.onNext(CountResponse.newBuilder().setCount(c).build());
+        responseObserver.onCompleted();
     }
 
 }

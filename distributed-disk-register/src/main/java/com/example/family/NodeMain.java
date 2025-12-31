@@ -44,7 +44,7 @@ public class NodeMain {
     private static final java.util.concurrent.ConcurrentHashMap<Integer, List<NodeInfo>> placement = new java.util.concurrent.ConcurrentHashMap<>();
 
     // --- Load Balancing Sayacı ---
-    private static final AtomicInteger loadBalancerCounter = new AtomicInteger(0);
+    //private static final AtomicInteger loadBalancerCounter = new AtomicInteger(0);
 
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
@@ -70,11 +70,18 @@ public class NodeMain {
         // Eğer bu ilk node ise (port 5555), TCP 6666'da text dinlesin
         if (port == START_PORT) {
             startLeaderTextListener(registry, self);
+            startClusterStatsPrinter(registry, self);
         }
 
         discoverExistingNodes(host, port, registry, self);
         startFamilyPrinter(registry, self);
         startHealthChecker(registry, self);
+
+        startLocalDiskCountPrinter(self);
+
+        if (port == START_PORT) {
+            startPlacementMapReportPrinter(registry, self);
+        }
 
         server.awaitTermination();
     }
@@ -116,24 +123,57 @@ public class NodeMain {
                 long ts = System.currentTimeMillis();
                 System.out.println("📝 Received from TCP: " + text);
 
-                String result = "ERROR";
-
                 // --- LOAD BALANCING MANTIĞI ---
-                if (text.toUpperCase().startsWith("SET ")) {
-                    // SET komutlarını dağıt
-                    result = handleLoadBalancedSet(text, registry, self);
-                } else {
-                    // GET vb. komutları işle
-                    result = commandParser.parseAndExecute(text);
 
-                    // Eğer GET ise ve bulamadıysak diğerlerine sor
-                    if (text.toUpperCase().startsWith("GET ") && "NOT_FOUND".equals(result)) {
-                        String fallback = tryRetrieveFromMembers(text, registry, self);
-                        if (fallback != null) {
-                            result = fallback;
+                String result;
+
+                String upper = text.toUpperCase();
+
+                if (upper.startsWith("SET ")) {
+                    int tolerance = readTolerance(); // tolerance.conf -> 2 vs
+
+                    // 1) Lider kendi diskine yazsın (CommandParser zaten diske yazıyor)
+                    result = commandParser.parseAndExecute(text);
+                    if (!"OK".equals(result)) {
+                        // yazamadıysa replikasyona hiç girme
+                    } else {
+                        int id = extractId(text);
+
+                        // 2) tolerance kadar üyeye replikasyon
+                        List<NodeInfo> replicas = replicateToMembers(text, registry, self, tolerance);
+
+                        // hedef sayısı: eldeki üye sayısına göre tolerance düşebilir
+                        int availableOthers = Math.max(0, registry.snapshot().size() - 1);
+                        int required = Math.min(tolerance, availableOthers);
+
+                        if (replicas.size() < required) {
+                            // 3) replica eksik → ERROR + liderdeki yazmayı geri al
+                            deleteLocalMessageFile(id);
+                            result = "ERROR";
+                        } else {
+                            // 4) placement güncelle (lider + başarılı replikalar)
+                            java.util.ArrayList<NodeInfo> where = new java.util.ArrayList<>();
+                            where.add(self);
+                            where.addAll(replicas);
+                            placement.put(id, java.util.List.copyOf(where));
                         }
                     }
+
+                } else if (upper.startsWith("GET ")) {
+
+                    // 1) önce liderin diskinden oku
+                    result = commandParser.parseAndExecute(text);
+
+                    // 2) liderde yoksa diğerlerine sor
+                    if ("NOT_FOUND".equals(result)) {
+                        String fallback = tryRetrieveFromMembers(text, registry, self);
+                        if (fallback != null) result = fallback;
+                    }
+
+                } else {
+                    result = "ERROR: Unknown command";
                 }
+
 
                 // --- Replikasyon ve Broadcast ---
                 // Eğer SET başarılı olduysa ChatMessage olarak yayınla
@@ -165,68 +205,6 @@ public class NodeMain {
         }
     }
 
-    // --- YENİ METOD: Load Balancing ile SET işlemi ---
-    private static String handleLoadBalancedSet(String command, NodeRegistry registry, NodeInfo self) {
-        String[] parts = command.trim().split("\\s+", 3);
-        if (parts.length < 3) return "ERROR";
-
-        int id;
-        try { id = Integer.parseInt(parts[1]); }
-        catch (NumberFormatException e) { return "ERROR"; }
-        String content = parts[2];
-
-        List<NodeInfo> members = registry.snapshot();
-        if (members.isEmpty()) return "ERROR";
-
-        // ROUND ROBIN: Sıradaki node'u seç
-        int index = Math.abs(loadBalancerCounter.getAndIncrement() % members.size());
-        NodeInfo targetNode = members.get(index);
-
-        System.out.printf("⚖️ Load Balancing: Routing SET %d to %s:%d%n",
-                id, targetNode.getHost(), targetNode.getPort());
-
-        // Eğer hedef bizsek, direkt yaz
-        if (targetNode.getHost().equals(self.getHost()) && targetNode.getPort() == self.getPort()) {
-            try {
-                diskStorage.write(id, content);
-                placement.computeIfAbsent(id, k -> new java.util.ArrayList<>()).add(self);
-                return "OK";
-            } catch (Exception e) {
-                return "ERROR";
-            }
-        } else {
-            // Hedef başkasıysa ona gRPC ile yolla
-            return sendSetRequestToRemote(targetNode, id, content, self);
-        }
-    }
-
-    // --- YENİ YARDIMCI METOD: Uzak Node'a Yazma ---
-    private static String sendSetRequestToRemote(NodeInfo target, int id, String content, NodeInfo self) {
-        ManagedChannel channel = null;
-        try {
-            channel = ManagedChannelBuilder.forAddress(target.getHost(), target.getPort())
-                    .usePlaintext().build();
-            MemberServiceGrpc.MemberServiceBlockingStub stub = MemberServiceGrpc.newBlockingStub(channel);
-
-            MessageRequest req = MessageRequest.newBuilder()
-                    .setId(id)
-                    .setContent(content)
-                    .setTimestamp(System.currentTimeMillis())
-                    .build();
-
-            MessageResponse res = stub.storeMessage(req);
-
-            if (res.getSuccess()) {
-                placement.computeIfAbsent(id, k -> new java.util.ArrayList<>()).add(target);
-                return "OK";
-            }
-        } catch (Exception e) {
-            System.err.println("Load balancer forward failed: " + e.getMessage());
-        } finally {
-            if (channel != null) channel.shutdownNow();
-        }
-        return "ERROR";
-    }
 
     private static void broadcastToFamily(NodeRegistry registry,
                                           NodeInfo self,
@@ -359,6 +337,66 @@ public class NodeMain {
 
         }, 5, 10, TimeUnit.SECONDS);
     }
+
+    private static void startLocalDiskCountPrinter(NodeInfo self, DiskStorage storage) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+            int count = storage.countMessages();
+            System.out.printf("🗂️ Local disk count at %s:%d => %d messages%n",
+                    self.getHost(), self.getPort(), count);
+        }, 5, 10, TimeUnit.SECONDS); // 5 sn sonra başla, 10 sn'de bir yaz
+    }
+
+
+    private static void startClusterStatsPrinter(NodeRegistry registry, NodeInfo self) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+            // Liderin kendi sayısı
+            int leaderCount = diskStorage.countMessages();
+
+            System.out.println("===== CLUSTER STATS =====");
+            System.out.printf("Leader %s:%d holds: %d messages%n",
+                    self.getHost(), self.getPort(), leaderCount);
+
+            int totalMembersCount = 0;
+
+            for (NodeInfo n : registry.snapshot()) {
+                if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) continue;
+
+                ManagedChannel channel = null;
+                try {
+                    channel = ManagedChannelBuilder
+                            .forAddress(n.getHost(), n.getPort())
+                            .usePlaintext()
+                            .build();
+
+                    MemberServiceGrpc.MemberServiceBlockingStub stub =
+                            MemberServiceGrpc.newBlockingStub(channel);
+
+                    int c = stub.getLocalCount(com.hatokuse.grpc.CountRequest.newBuilder().build())
+                            .getCount();
+
+                    totalMembersCount += c;
+
+                    System.out.printf("Member %s:%d holds: %d messages%n",
+                            n.getHost(), n.getPort(), c);
+
+                } catch (Exception e) {
+                    System.out.printf("Member %s:%d count failed (%s)%n",
+                            n.getHost(), n.getPort(), e.getMessage());
+                } finally {
+                    if (channel != null) channel.shutdownNow();
+                }
+            }
+
+            System.out.printf("TOTAL (leader+members): %d%n", leaderCount + totalMembersCount);
+            System.out.println("=========================");
+
+        }, 5, 10, TimeUnit.SECONDS);
+    }
+
 
     private static List<NodeInfo> replicateToMembers(String command,
                                                      NodeRegistry registry,
@@ -503,4 +541,83 @@ public class NodeMain {
         } catch (Exception ignored) {}
         return 1;
     }
+
+    private static void deleteLocalMessageFile(int id) {
+        try {
+            java.nio.file.Path p = java.nio.file.Paths.get("messages", id + ".msg");
+            java.nio.file.Files.deleteIfExists(p);
+        } catch (Exception ignored) {}
+    }
+
+    private static void startLocalDiskCountPrinter(NodeInfo self) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                java.nio.file.Path dir = java.nio.file.Paths.get("messages");
+                long count = 0;
+
+                if (java.nio.file.Files.exists(dir)) {
+                    try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.list(dir)) {
+                        count = stream
+                                .filter(p -> p.getFileName().toString().endsWith(".msg"))
+                                .count();
+                    }
+                }
+
+                System.out.printf("💾 Local disk count at %s:%d = %d messages%n",
+                        self.getHost(), self.getPort(), count);
+
+            } catch (Exception e) {
+                System.err.printf("Local disk count error at %s:%d (%s)%n",
+                        self.getHost(), self.getPort(), e.getMessage());
+            }
+        }, 5, 10, TimeUnit.SECONDS);
+    }
+
+    private static void startPlacementMapReportPrinter(NodeRegistry registry, NodeInfo self) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+            // nodeKey -> count
+            java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+
+            int totalMessagesTracked = 0;
+
+            for (java.util.Map.Entry<Integer, List<NodeInfo>> e : placement.entrySet()) {
+                totalMessagesTracked++;
+
+                List<NodeInfo> holders = e.getValue();
+                if (holders == null) continue;
+
+                for (NodeInfo n : holders) {
+                    String key = n.getHost() + ":" + n.getPort();
+                    counts.put(key, counts.getOrDefault(key, 0) + 1);
+                }
+            }
+
+            System.out.println("========== 📊 Placement Map Report (leader) ==========");
+            System.out.printf("Leader: %s:%d | tracked message ids: %d | family size: %d%n",
+                    self.getHost(), self.getPort(), totalMessagesTracked, registry.snapshot().size());
+
+            // family’de görünen üyeler + leader dahil hepsini yazsın (0 olanlar da görünsün)
+            java.util.List<NodeInfo> members = registry.snapshot();
+            for (NodeInfo n : members) {
+                String key = n.getHost() + ":" + n.getPort();
+                int c = counts.getOrDefault(key, 0);
+                System.out.printf(" - %s => %d placements%n", key, c);
+            }
+
+            // leader kendi key’i (registry bazen leader'ı içeriyor zaten ama garanti olsun)
+            String leaderKey = self.getHost() + ":" + self.getPort();
+            if (counts.containsKey(leaderKey) && members.stream().noneMatch(m -> (m.getHost()+":"+m.getPort()).equals(leaderKey))) {
+                System.out.printf(" - %s => %d placements%n", leaderKey, counts.getOrDefault(leaderKey, 0));
+            }
+
+            System.out.println("======================================================");
+        }, 7, 10, TimeUnit.SECONDS);
+    }
+
+
+
 }

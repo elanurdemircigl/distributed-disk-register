@@ -9,6 +9,7 @@ service MemberService {
   // Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
   rpc StoreMessage (MessageRequest) returns (MessageResponse) {}
   rpc RetrieveMessage (RetrieveRequest) returns (RetrieveResponse) {}
+  rpc GetLocalCount (CountRequest) returns (CountResponse) {}
 }
 
 // Liderin gönderdiği mesaj paketi
@@ -32,4 +33,10 @@ message RetrieveResponse {
   bool found = 1;
   string content = 2;
   string message = 3; // "OK" / "NOT_FOUND" / "ERROR: ..."
+}
+
+message CountRequest {}
+
+message CountResponse {
+  int32 count = 1;
 }

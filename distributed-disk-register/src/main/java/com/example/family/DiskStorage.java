@@ -24,4 +24,17 @@ public class DiskStorage {
         if (!Files.exists(path)) return null;
         return Files.readString(path);
     }
+
+    public int countMessages() {
+        try {
+            Path dir = Paths.get(BASE_DIR);
+            if (!Files.exists(dir)) return 0;
+            try (var stream = Files.list(dir)) {
+                return (int) stream.filter(p -> p.getFileName().toString().endsWith(".msg")).count();
+            }
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
 }
