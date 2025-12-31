@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.hatokuse.grpc"; // Java paket ismin
+option java_outer_classname = "HatokuseProto";
+
+// Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
+service MemberService {
+  // Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
+  rpc StoreMessage (MessageRequest) returns (MessageResponse) {}
+  rpc RetrieveMessage (RetrieveRequest) returns (RetrieveResponse) {}
+  rpc GetLocalCount (CountRequest) returns (CountResponse) {}
+}
+
+// Liderin gönderdiği mesaj paketi
+message MessageRequest {
+  int32 id = 1;        // Mesaj ID'si (Ödevde istenen ID)
+  string content = 2;  // Mesajın metin içeriği
+  int64 timestamp = 3; // Ne zaman geldiği
+}
+
+// Üyenin lidere döndüğü cevap
+message MessageResponse {
+  bool success = 1;   // Kayıt başarılı mı?
+  string message = 2; // Hata varsa açıklaması, yoksa "OK"
+}
+
+message RetrieveRequest {
+  int32 id = 1;
+}
+
+message RetrieveResponse {
+  bool found = 1;
+  string content = 2;
+  string message = 3; // "OK" / "NOT_FOUND" / "ERROR: ..."
+}
+
+message CountRequest {}
+
+message CountResponse {
+  int32 count = 1;
+}
