@@ -31,6 +31,11 @@ import com.hatokuse.grpc.MessageResponse;
 import com.hatokuse.grpc.RetrieveRequest;
 import com.hatokuse.grpc.RetrieveResponse;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+
+import java.nio.file.*;
 
 public class NodeMain {
 
@@ -39,6 +44,8 @@ public class NodeMain {
 
     private static final DiskStorage diskStorage = new DiskStorage();
     private static final CommandParser commandParser = new CommandParser(diskStorage);
+
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, List<NodeInfo>> placement = new java.util.concurrent.ConcurrentHashMap<>();
 
 
     public static void main(String[] args) throws Exception {
@@ -118,6 +125,7 @@ private static void handleClientTextConnection(Socket client,
             // Kendi üstüne de yaz
             System.out.println("📝 Received from TCP: " + text);
             String result = commandParser.parseAndExecute(text);
+
             if (text.toUpperCase().startsWith("GET ") && "NOT_FOUND".equals(result)) {
                 String fallback = tryRetrieveFromMembers(text, registry, self);
                 if (fallback != null) {
@@ -126,7 +134,11 @@ private static void handleClientTextConnection(Socket client,
             }
 
             if (text.toUpperCase().startsWith("SET ")) {
-                replicateToMembers(text, registry, self);
+                int tolerance = readTolerance();
+                List<NodeInfo> okNodes = replicateToMembers(text, registry, self, tolerance);
+                placement.put(extractId(text), okNodes);
+
+
             }
             System.out.println("➡️ Command result: " + result);
             writer.write(result);
@@ -291,33 +303,25 @@ private static void broadcastToFamily(NodeRegistry registry,
 
     }, 5, 10, TimeUnit.SECONDS); // 5 sn sonra başla, 10 sn'de bir kontrol et
 }
-    private static void replicateToMembers(String command,
-                                           NodeRegistry registry,
-                                           NodeInfo self) {
 
-        // SET <id> <msg> formatı bekliyoruz
+    private static List<NodeInfo> replicateToMembers(String command,
+                                                     NodeRegistry registry,
+                                                     NodeInfo self,
+                                                     int tolerance) {
         String[] parts = command.trim().split("\\s+", 3);
-        if (parts.length < 3) {
-            return;
-        }
+        if (parts.length < 3) return List.of();
 
         int id;
-        try {
-            id = Integer.parseInt(parts[1]);
-        } catch (NumberFormatException e) {
-            return; // CommandParser zaten ERROR döndürür, burada sadece replikasyon yapmayız
-        }
+        try { id = Integer.parseInt(parts[1]); }
+        catch (NumberFormatException e) { return List.of(); }
 
         String content = parts[2];
         long ts = System.currentTimeMillis();
 
-        for (NodeInfo n : registry.snapshot()) {
+        List<NodeInfo> targets = pickReplicaMembers(id, registry.snapshot(), self, tolerance);
+        List<NodeInfo> success = new java.util.ArrayList<>();
 
-            // Kendimize yollama
-            if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) {
-                continue;
-            }
-
+        for (NodeInfo n : targets) {
             ManagedChannel channel = null;
             try {
                 channel = ManagedChannelBuilder
@@ -339,6 +343,8 @@ private static void broadcastToFamily(NodeRegistry registry,
                 System.out.printf("Replicated SET %d to %s:%d -> %s%n",
                         id, n.getHost(), n.getPort(), res.getMessage());
 
+                if (res.getSuccess()) success.add(n);
+
             } catch (Exception e) {
                 System.err.printf("Replication failed to %s:%d (%s)%n",
                         n.getHost(), n.getPort(), e.getMessage());
@@ -346,7 +352,11 @@ private static void broadcastToFamily(NodeRegistry registry,
                 if (channel != null) channel.shutdownNow();
             }
         }
+
+        return success;
     }
+
+
 
     private static String tryRetrieveFromMembers(String command,
                                                  NodeRegistry registry,
@@ -361,7 +371,12 @@ private static void broadcastToFamily(NodeRegistry registry,
             return null;
         }
 
-        for (NodeInfo n : registry.snapshot()) {
+        List<NodeInfo> targets = placement.get(id);
+        if (targets == null || targets.isEmpty()) {
+            targets = registry.snapshot();
+        }
+
+        for (NodeInfo n : targets) {
             if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) continue;
 
             ManagedChannel channel = null;
@@ -392,6 +407,57 @@ private static void broadcastToFamily(NodeRegistry registry,
             }
         }
         return null;
+    }
+
+
+
+    private static List<NodeInfo> pickReplicaMembers(int messageId,
+                                                     List<NodeInfo> allMembers,
+                                                     NodeInfo self,
+                                                     int k) {
+        // Kendimiz hariç üyeler
+        List<NodeInfo> others = allMembers.stream()
+                .filter(n -> !(n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()))
+                .sorted((a, b) -> {
+                    int c = a.getHost().compareTo(b.getHost());
+                    return (c != 0) ? c : Integer.compare(a.getPort(), b.getPort());
+                })
+                .toList();
+
+        if (k <= 0 || others.isEmpty()) return List.of();
+        if (k >= others.size()) return others;
+
+        // messageId ile deterministik başlangıç (dağılım dengelenir)
+        int start = Math.floorMod(messageId, others.size());
+
+        List<NodeInfo> picked = new java.util.ArrayList<>();
+        for (int i = 0; i < k; i++) {
+            picked.add(others.get((start + i) % others.size()));
+        }
+        return picked;
+    }
+
+    private static int extractId(String command) {
+        String[] parts = command.trim().split("\\s+");
+        return Integer.parseInt(parts[1]);
+    }
+
+    private static int readTolerance() {
+
+        Path p = Paths.get("tolerance.conf");
+        try {
+            if (!Files.exists(p)) return 1;
+            for (String line : Files.readAllLines(p)) {
+                line = line.trim();
+                if (line.startsWith("TOLERANCE=")) {
+                    int v = Integer.parseInt(line.substring("TOLERANCE=".length()).trim());
+                    if (v < 1) return 1;
+                    if (v > 7) return 7;
+                    return v;
+                }
+            }
+        } catch (Exception ignored) {}
+        return 1;
     }
 
 
