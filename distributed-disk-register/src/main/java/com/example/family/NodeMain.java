@@ -498,6 +498,10 @@ public class NodeMain {
             } catch (Exception e) {
                 System.err.printf("GET fallback failed from %s:%d (%s)%n",
                         n.getHost(), n.getPort(), e.getMessage());
+
+                System.out.printf("Node %s:%d unreachable during GET, removing from family%n",
+                        n.getHost(), n.getPort());
+                registry.remove(n);
             } finally {
                 if (channel != null) channel.shutdownNow();
             }
