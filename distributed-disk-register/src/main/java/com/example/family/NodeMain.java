@@ -39,8 +39,11 @@ public class NodeMain {
     private static final int START_PORT = 5555;
     private static final int PRINT_INTERVAL_SECONDS = 10;
 
-    private static final DiskStorage diskStorage = new DiskStorage();
-    private static final CommandParser commandParser = new CommandParser(diskStorage);
+    //private static final DiskStorage diskStorage = new DiskStorage();
+    //private static final CommandParser commandParser = new CommandParser(diskStorage);
+    private static DiskStorage diskStorage;
+    private static CommandParser commandParser;
+
 
     private static final java.util.concurrent.ConcurrentHashMap<Integer, List<NodeInfo>> placement = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -50,6 +53,10 @@ public class NodeMain {
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
         int port = findFreePort(START_PORT);
+
+        diskStorage = new DiskStorage(String.valueOf(port));   // veya "node-" + port
+        commandParser = new CommandParser(diskStorage);
+
 
         NodeInfo self = NodeInfo.newBuilder()
                 .setHost(host)
@@ -542,13 +549,20 @@ public class NodeMain {
         } catch (Exception ignored) {}
         return 1;
     }
-
+/*
     private static void deleteLocalMessageFile(int id) {
         try {
             java.nio.file.Path p = java.nio.file.Paths.get("messages", id + ".msg");
             java.nio.file.Files.deleteIfExists(p);
         } catch (Exception ignored) {}
     }
+*/
+    private static void deleteLocalMessageFile(int id) {
+        try {
+            diskStorage.delete(id);
+        } catch (Exception ignored) {}
+    }
+
 
     private static void startLocalDiskCountPrinter(NodeInfo self) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();

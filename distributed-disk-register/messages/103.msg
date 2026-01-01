@@ -1,1 +1,0 @@
-deneme[D[D[D[D[A[B
