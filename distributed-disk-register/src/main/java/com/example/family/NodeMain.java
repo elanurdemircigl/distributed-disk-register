@@ -85,7 +85,7 @@ public class NodeMain {
         startFamilyPrinter(registry, self);
         startHealthChecker(registry, self);
 
-        startLocalDiskCountPrinter(self);
+        startLocalDiskCountPrinter(self, diskStorage);
 
         if (port == START_PORT) {
             startPlacementMapReportPrinter(registry, self);
@@ -564,31 +564,6 @@ public class NodeMain {
     }
 
 
-    private static void startLocalDiskCountPrinter(NodeInfo self) {
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                java.nio.file.Path dir = java.nio.file.Paths.get("messages");
-                long count = 0;
-
-                if (java.nio.file.Files.exists(dir)) {
-                    try (java.util.stream.Stream<java.nio.file.Path> stream = java.nio.file.Files.list(dir)) {
-                        count = stream
-                                .filter(p -> p.getFileName().toString().endsWith(".msg"))
-                                .count();
-                    }
-                }
-
-                System.out.printf("💾 Local disk count at %s:%d = %d messages%n",
-                        self.getHost(), self.getPort(), count);
-
-            } catch (Exception e) {
-                System.err.printf("Local disk count error at %s:%d (%s)%n",
-                        self.getHost(), self.getPort(), e.getMessage());
-            }
-        }, 5, 10, TimeUnit.SECONDS);
-    }
 
     private static void startPlacementMapReportPrinter(NodeRegistry registry, NodeInfo self) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
