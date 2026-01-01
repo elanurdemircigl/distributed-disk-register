@@ -47,8 +47,8 @@ public class NodeMain {
 
     private static final java.util.concurrent.ConcurrentHashMap<Integer, List<NodeInfo>> placement = new java.util.concurrent.ConcurrentHashMap<>();
 
-    // --- Load Balancing Sayacı ---
-    //private static final AtomicInteger loadBalancerCounter = new AtomicInteger(0);
+    // Load Balancing Sayacı
+
 
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
@@ -131,7 +131,7 @@ public class NodeMain {
                 long ts = System.currentTimeMillis();
                 System.out.println("📝 Received from TCP: " + text);
 
-                // --- LOAD BALANCING MANTIĞI ---
+
 
                 String result;
 
@@ -353,7 +353,7 @@ public class NodeMain {
             int count = storage.countMessages();
             System.out.printf("🗂️ Local disk count at %s:%d => %d messages%n",
                     self.getHost(), self.getPort(), count);
-        }, 5, 10, TimeUnit.SECONDS); // 5 sn sonra başla, 10 sn'de bir yaz
+        }, 5, 10, TimeUnit.SECONDS);
     }
 
 
@@ -597,7 +597,7 @@ public class NodeMain {
             System.out.printf("Leader: %s:%d | tracked message ids: %d | family size: %d%n",
                     self.getHost(), self.getPort(), totalMessagesTracked, registry.snapshot().size());
 
-            // family’de görünen üyeler + leader dahil hepsini yazsın (0 olanlar da görünsün)
+
             java.util.List<NodeInfo> members = registry.snapshot();
             for (NodeInfo n : members) {
                 String key = n.getHost() + ":" + n.getPort();
@@ -605,7 +605,7 @@ public class NodeMain {
                 System.out.printf(" - %s => %d placements%n", key, c);
             }
 
-            // leader kendi key’i (registry bazen leader'ı içeriyor zaten ama garanti olsun)
+
             String leaderKey = self.getHost() + ":" + self.getPort();
             if (counts.containsKey(leaderKey) && members.stream().noneMatch(m -> (m.getHost()+":"+m.getPort()).equals(leaderKey))) {
                 System.out.printf(" - %s => %d placements%n", leaderKey, counts.getOrDefault(leaderKey, 0));

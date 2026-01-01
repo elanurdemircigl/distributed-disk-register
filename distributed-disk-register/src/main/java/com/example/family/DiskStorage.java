@@ -85,7 +85,7 @@ public class DiskStorage {
         try (Stream<Path> s = Files.list(baseDir)) {
             return (int) s.filter(p -> p.getFileName().toString().endsWith(".msg")).count();
         } catch (IOException e) {
-            return -1; // sayamadı
+            return -1;
         }
     }
 
