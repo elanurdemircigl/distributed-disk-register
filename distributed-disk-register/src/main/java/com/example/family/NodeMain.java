@@ -370,7 +370,9 @@ public class NodeMain {
 
             int totalMembersCount = 0;
 
+            // ÖNEMLİ: Listeyi kopyalayarak alıyoruz (Snapshot)
             for (NodeInfo n : registry.snapshot()) {
+                // Kendisi ise atla
                 if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) continue;
 
                 ManagedChannel channel = null;
@@ -383,7 +385,10 @@ public class NodeMain {
                     MemberServiceGrpc.MemberServiceBlockingStub stub =
                             MemberServiceGrpc.newBlockingStub(channel);
 
-                    int c = stub.getLocalCount(com.hatokuse.grpc.CountRequest.newBuilder().build())
+                    // --- KRİTİK NOKTA ---
+                    // Deadline ekleyerek (1 saniye) takılmasını önleyelim
+                    int c = stub.withDeadlineAfter(1, TimeUnit.SECONDS)
+                            .getLocalCount(com.hatokuse.grpc.CountRequest.newBuilder().build())
                             .getCount();
 
                     totalMembersCount += c;
@@ -392,11 +397,12 @@ public class NodeMain {
                             n.getHost(), n.getPort(), c);
 
                 } catch (Exception e) {
-                    System.out.printf("Member %s:%d count failed (%s)%n",
-                            n.getHost(), n.getPort(), e.getMessage());
-                    System.out.printf("Node %s:%d unreachable during stats, removing...%n",
+                    // HATA ALINDIĞINDA BURASI ÇALIŞIR
+                    System.err.printf("❌ Member %s:%d unreachable (error/crash). Removing from family...%n",
                             n.getHost(), n.getPort());
-                    registry.remove(n); //Hata veren üyeyi anında listeden sil
+
+                    // LİSTEDEN SİLME İŞLEMİ:
+                    registry.remove(n);
                 } finally {
                     if (channel != null) channel.shutdownNow();
                 }
