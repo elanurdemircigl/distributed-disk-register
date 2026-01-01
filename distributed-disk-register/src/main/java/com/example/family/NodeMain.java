@@ -394,6 +394,9 @@ public class NodeMain {
                 } catch (Exception e) {
                     System.out.printf("Member %s:%d count failed (%s)%n",
                             n.getHost(), n.getPort(), e.getMessage());
+                    System.out.printf("Node %s:%d unreachable during stats, removing...%n",
+                            n.getHost(), n.getPort());
+                    registry.remove(n); //Hata veren üyeyi anında listeden sil
                 } finally {
                     if (channel != null) channel.shutdownNow();
                 }
