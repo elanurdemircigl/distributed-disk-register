@@ -1,4 +1,4 @@
-//deneme
+
 package com.example.family;
 
 import family.Empty;

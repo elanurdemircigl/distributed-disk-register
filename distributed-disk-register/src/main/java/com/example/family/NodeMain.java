@@ -1,4 +1,4 @@
-//deneme
+
 package com.example.family;
 
 import family.Empty;
@@ -39,8 +39,6 @@ public class NodeMain {
     private static final int START_PORT = 5555;
     private static final int PRINT_INTERVAL_SECONDS = 10;
 
-    //private static final DiskStorage diskStorage = new DiskStorage();
-    //private static final CommandParser commandParser = new CommandParser(diskStorage);
     private static DiskStorage diskStorage;
     private static CommandParser commandParser;
 
@@ -140,26 +138,20 @@ public class NodeMain {
                 if (upper.startsWith("SET ")) {
                     int tolerance = readTolerance(); // tolerance.conf -> 2 vs
 
-                    // 1) Lider kendi diskine yazsın (CommandParser zaten diske yazıyor)
                     result = commandParser.parseAndExecute(text);
                     if (!"OK".equals(result)) {
-                        // yazamadıysa replikasyona hiç girme
                     } else {
                         int id = extractId(text);
 
-                        // 2) tolerance kadar üyeye replikasyon
                         List<NodeInfo> replicas = replicateToMembers(text, registry, self, tolerance);
 
-                        // hedef sayısı: eldeki üye sayısına göre tolerance düşebilir
                         int availableOthers = Math.max(0, registry.snapshot().size() - 1);
                         int required = Math.min(tolerance, availableOthers);
 
                         if (replicas.size() < required) {
-                            // 3) replica eksik → ERROR + liderdeki yazmayı geri al
                             deleteLocalMessageFile(id);
                             result = "ERROR";
                         } else {
-                            // 4) placement güncelle (lider + başarılı replikalar)
                             java.util.ArrayList<NodeInfo> where = new java.util.ArrayList<>();
                             where.add(self);
                             where.addAll(replicas);
@@ -169,10 +161,8 @@ public class NodeMain {
 
                 } else if (upper.startsWith("GET ")) {
 
-                    // 1) önce liderin diskinden oku
                     result = commandParser.parseAndExecute(text);
 
-                    // 2) liderde yoksa diğerlerine sor
                     if ("NOT_FOUND".equals(result)) {
                         String fallback = tryRetrieveFromMembers(text, registry, self);
                         if (fallback != null) result = fallback;
@@ -183,13 +173,11 @@ public class NodeMain {
                 }
 
 
-                // --- Replikasyon ve Broadcast ---
-                // Eğer SET başarılı olduysa ChatMessage olarak yayınla
-                if (text.toUpperCase().startsWith("SET ") && "OK".equals(result)) {
-                    // Not: Replikasyon istenirse burada handle edilebilir.
-                    // Şu an Load Balancer sadece tek bir node'a atıyor.
-                }
+                // Replikasyon ve Broadcast
 
+                if (text.toUpperCase().startsWith("SET ") && "OK".equals(result)) {
+
+                }
                 System.out.println("➡️ Command result: " + result);
                 writer.write(result);
                 writer.newLine();
@@ -212,7 +200,6 @@ public class NodeMain {
             try { client.close(); } catch (IOException ignored) {}
         }
     }
-
 
     private static void broadcastToFamily(NodeRegistry registry,
                                           NodeInfo self,
@@ -370,9 +357,7 @@ public class NodeMain {
 
             int totalMembersCount = 0;
 
-            // ÖNEMLİ: Listeyi kopyalayarak alıyoruz (Snapshot)
             for (NodeInfo n : registry.snapshot()) {
-                // Kendisi ise atla
                 if (n.getHost().equals(self.getHost()) && n.getPort() == self.getPort()) continue;
 
                 ManagedChannel channel = null;
@@ -385,8 +370,7 @@ public class NodeMain {
                     MemberServiceGrpc.MemberServiceBlockingStub stub =
                             MemberServiceGrpc.newBlockingStub(channel);
 
-                    // --- KRİTİK NOKTA ---
-                    // Deadline ekleyerek (1 saniye) takılmasını önleyelim
+
                     int c = stub.withDeadlineAfter(1, TimeUnit.SECONDS)
                             .getLocalCount(com.hatokuse.grpc.CountRequest.newBuilder().build())
                             .getCount();
@@ -397,11 +381,10 @@ public class NodeMain {
                             n.getHost(), n.getPort(), c);
 
                 } catch (Exception e) {
-                    // HATA ALINDIĞINDA BURASI ÇALIŞIR
+
                     System.err.printf("❌ Member %s:%d unreachable (error/crash). Removing from family...%n",
                             n.getHost(), n.getPort());
 
-                    // LİSTEDEN SİLME İŞLEMİ:
                     registry.remove(n);
                 } finally {
                     if (channel != null) channel.shutdownNow();
@@ -575,7 +558,6 @@ public class NodeMain {
             diskStorage.delete(id);
         } catch (Exception ignored) {}
     }
-
 
 
     private static void startPlacementMapReportPrinter(NodeRegistry registry, NodeInfo self) {
