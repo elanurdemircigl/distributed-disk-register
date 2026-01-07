@@ -136,7 +136,7 @@ public class NodeMain {
                 String upper = text.toUpperCase();
 
                 if (upper.startsWith("SET ")) {
-                    int tolerance = readTolerance(); // tolerance.conf -> 2 vs
+                    int tolerance = readTolerance();
 
                     result = commandParser.parseAndExecute(text);
                     if (!"OK".equals(result)) {
@@ -173,8 +173,6 @@ public class NodeMain {
                 }
 
 
-                // Replikasyon ve Broadcast
-
                 if (text.toUpperCase().startsWith("SET ") && "OK".equals(result)) {
 
                 }
@@ -190,7 +188,7 @@ public class NodeMain {
                         .setTimestamp(ts)
                         .build();
 
-                // Tüm family üyelerine broadcast et
+
                 broadcastToFamily(registry, self, msg);
             }
 
@@ -348,7 +346,6 @@ public class NodeMain {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
         scheduler.scheduleAtFixedRate(() -> {
-            // Liderin kendi sayısı
             int leaderCount = diskStorage.countMessages();
 
             System.out.println("===== CLUSTER STATS =====");
@@ -381,9 +378,6 @@ public class NodeMain {
                             n.getHost(), n.getPort(), c);
 
                 } catch (Exception e) {
-
-                    System.err.printf("❌ Member %s:%d unreachable (error/crash). Removing from family...%n",
-                            n.getHost(), n.getPort());
 
                     registry.remove(n);
                 } finally {
@@ -545,14 +539,7 @@ public class NodeMain {
         } catch (Exception ignored) {}
         return 1;
     }
-/*
-    private static void deleteLocalMessageFile(int id) {
-        try {
-            java.nio.file.Path p = java.nio.file.Paths.get("messages", id + ".msg");
-            java.nio.file.Files.deleteIfExists(p);
-        } catch (Exception ignored) {}
-    }
-*/
+
     private static void deleteLocalMessageFile(int id) {
         try {
             diskStorage.delete(id);
