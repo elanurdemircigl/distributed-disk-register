@@ -1,6 +1,4 @@
-
 package com.example.family;
-
 import family.Empty;
 import family.FamilyServiceGrpc;
 import family.FamilyView;
@@ -161,11 +159,17 @@ public class NodeMain {
 
                 } else if (upper.startsWith("GET ")) {
 
-                    result = commandParser.parseAndExecute(text);
+                    String value = commandParser.parseAndExecute(text);
 
-                    if ("NOT_FOUND".equals(result)) {
+                    if ("NOT_FOUND".equals(value)) {
                         String fallback = tryRetrieveFromMembers(text, registry, self);
-                        if (fallback != null) result = fallback;
+                        if (fallback != null) value = fallback;
+                    }
+
+                    if ("NOT_FOUND".equals(value)) {
+                        result = "NOT_FOUND";
+                    } else {
+                        result = "OK " + value;
                     }
 
                 } else {
