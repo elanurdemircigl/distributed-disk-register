@@ -17,7 +17,6 @@ import java.net.ServerSocket;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger; // Load Balancer için sayaç
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -43,14 +42,13 @@ public class NodeMain {
 
     private static final java.util.concurrent.ConcurrentHashMap<Integer, List<NodeInfo>> placement = new java.util.concurrent.ConcurrentHashMap<>();
 
-    // Load Balancing Sayacı
 
 
     public static void main(String[] args) throws Exception {
         String host = "127.0.0.1";
         int port = findFreePort(START_PORT);
 
-        diskStorage = new DiskStorage(String.valueOf(port));   // veya "node-" + port
+        diskStorage = new DiskStorage(String.valueOf(port));
         commandParser = new CommandParser(diskStorage);
 
 
@@ -136,43 +134,40 @@ public class NodeMain {
                 if (upper.startsWith("SET ")) {
                     int tolerance = readTolerance();
 
-                    result = commandParser.parseAndExecute(text);
-                    if (!"OK".equals(result)) {
+
+                    String[] parts = text.trim().split("\\s+", 3);
+                    if (parts.length < 3) {
+                        result = "ERROR";
                     } else {
-                        int id = extractId(text);
+                        int id;
+                        try { id = Integer.parseInt(parts[1]); }
+                        catch (NumberFormatException e) { id = -1; }
 
-                        List<NodeInfo> replicas = replicateToMembers(text, registry, self, tolerance);
-
-                        int availableOthers = Math.max(0, registry.snapshot().size() - 1);
-                        int required = Math.min(tolerance, availableOthers);
-
-                        if (replicas.size() < required) {
-                            deleteLocalMessageFile(id);
+                        if (id < 0) {
                             result = "ERROR";
                         } else {
-                            java.util.ArrayList<NodeInfo> where = new java.util.ArrayList<>();
-                            where.add(self);
-                            where.addAll(replicas);
-                            placement.put(id, java.util.List.copyOf(where));
+
+                            List<NodeInfo> replicas = replicateToMembers(text, registry, self, tolerance);
+
+                            int availableOthers = Math.max(0, registry.snapshot().size() - 1);
+                            int required = Math.min(tolerance, availableOthers);
+
+                            if (replicas.size() < required) {
+                                result = "ERROR";
+                            } else {
+
+                                placement.put(id, java.util.List.copyOf(replicas));
+                                result = "OK";
+                            }
                         }
                     }
+                }
+                else if (upper.startsWith("GET ")) {
 
-                } else if (upper.startsWith("GET ")) {
-
-                    String value = commandParser.parseAndExecute(text);
-
-                    if ("NOT_FOUND".equals(value)) {
-                        String fallback = tryRetrieveFromMembers(text, registry, self);
-                        if (fallback != null) value = fallback;
-                    }
-
-                    if ("NOT_FOUND".equals(value)) {
-                        result = "NOT_FOUND";
-                    } else {
-                        result = "OK " + value;
-                    }
-
-                } else {
+                    String fallback = tryRetrieveFromMembers(text, registry, self);
+                    result = (fallback != null) ? fallback : "NOT_FOUND";
+                }
+                else {
                     result = "ERROR: Unknown command";
                 }
 
@@ -350,11 +345,11 @@ public class NodeMain {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
         scheduler.scheduleAtFixedRate(() -> {
-            int leaderCount = diskStorage.countMessages();
+            //int leaderCount = diskStorage.countMessages();
 
             System.out.println("===== CLUSTER STATS =====");
-            System.out.printf("Leader %s:%d holds: %d messages%n",
-                    self.getHost(), self.getPort(), leaderCount);
+            //System.out.printf("Leader %s:%d holds: %d messages%n",
+                    //self.getHost(), self.getPort(), leaderCount);
 
             int totalMembersCount = 0;
 
@@ -389,7 +384,7 @@ public class NodeMain {
                 }
             }
 
-            System.out.printf("TOTAL (leader+members): %d%n", leaderCount + totalMembersCount);
+            System.out.printf("TOTAL: %d%n", totalMembersCount);
             System.out.println("=========================");
 
         }, 5, 10, TimeUnit.SECONDS);
@@ -522,10 +517,6 @@ public class NodeMain {
         return picked;
     }
 
-    private static int extractId(String command) {
-        String[] parts = command.trim().split("\\s+");
-        return Integer.parseInt(parts[1]);
-    }
 
     private static int readTolerance() {
         Path p = Paths.get("tolerance.conf");
@@ -544,18 +535,11 @@ public class NodeMain {
         return 1;
     }
 
-    private static void deleteLocalMessageFile(int id) {
-        try {
-            diskStorage.delete(id);
-        } catch (Exception ignored) {}
-    }
-
 
     private static void startPlacementMapReportPrinter(NodeRegistry registry, NodeInfo self) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
         scheduler.scheduleAtFixedRate(() -> {
-            // nodeKey -> count
             java.util.Map<String, Integer> counts = new java.util.HashMap<>();
 
             int totalMessagesTracked = 0;
@@ -589,6 +573,7 @@ public class NodeMain {
             if (counts.containsKey(leaderKey) && members.stream().noneMatch(m -> (m.getHost()+":"+m.getPort()).equals(leaderKey))) {
                 System.out.printf(" - %s => %d placements%n", leaderKey, counts.getOrDefault(leaderKey, 0));
             }
+
 
             System.out.println("======================================================");
         }, 7, 10, TimeUnit.SECONDS);
