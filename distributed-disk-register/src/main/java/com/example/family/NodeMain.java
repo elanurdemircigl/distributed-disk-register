@@ -149,10 +149,8 @@ public class NodeMain {
 
                             List<NodeInfo> replicas = replicateToMembers(text, registry, self, tolerance);
 
-                            int availableOthers = Math.max(0, registry.snapshot().size() - 1);
-                            int required = Math.min(tolerance, availableOthers);
 
-                            if (replicas.size() < required) {
+                            if (replicas.size() < tolerance) {
                                 result = "ERROR";
                             } else {
 
