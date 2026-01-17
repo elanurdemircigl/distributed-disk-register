@@ -95,10 +95,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object message_ = "";
   /**
-   * <pre>
-   * "OK" / "NOT_FOUND" / "ERROR: ..."
-   * </pre>
-   *
    * <code>string message = 3;</code>
    * @return The message.
    */
@@ -116,10 +112,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * "OK" / "NOT_FOUND" / "ERROR: ..."
-   * </pre>
-   *
    * <code>string message = 3;</code>
    * @return The bytes for message.
    */
@@ -618,10 +610,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object message_ = "";
     /**
-     * <pre>
-     * "OK" / "NOT_FOUND" / "ERROR: ..."
-     * </pre>
-     *
      * <code>string message = 3;</code>
      * @return The message.
      */
@@ -638,10 +626,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * "OK" / "NOT_FOUND" / "ERROR: ..."
-     * </pre>
-     *
      * <code>string message = 3;</code>
      * @return The bytes for message.
      */
@@ -659,10 +643,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * "OK" / "NOT_FOUND" / "ERROR: ..."
-     * </pre>
-     *
      * <code>string message = 3;</code>
      * @param value The message to set.
      * @return This builder for chaining.
@@ -676,10 +656,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * "OK" / "NOT_FOUND" / "ERROR: ..."
-     * </pre>
-     *
      * <code>string message = 3;</code>
      * @return This builder for chaining.
      */
@@ -690,10 +666,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * "OK" / "NOT_FOUND" / "ERROR: ..."
-     * </pre>
-     *
      * <code>string message = 3;</code>
      * @param value The bytes for message to set.
      * @return This builder for chaining.

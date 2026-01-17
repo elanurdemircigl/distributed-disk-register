@@ -9,29 +9,17 @@ public interface MessageRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <pre>
-   * Mesaj ID'si (Ödevde istenen ID)
-   * </pre>
-   *
    * <code>int32 id = 1;</code>
    * @return The id.
    */
   int getId();
 
   /**
-   * <pre>
-   * Mesajın metin içeriği
-   * </pre>
-   *
    * <code>string content = 2;</code>
    * @return The content.
    */
   java.lang.String getContent();
   /**
-   * <pre>
-   * Mesajın metin içeriği
-   * </pre>
-   *
    * <code>string content = 2;</code>
    * @return The bytes for content.
    */
@@ -39,10 +27,6 @@ public interface MessageRequestOrBuilder extends
       getContentBytes();
 
   /**
-   * <pre>
-   * Ne zaman geldiği
-   * </pre>
-   *
    * <code>int64 timestamp = 3;</code>
    * @return The timestamp.
    */

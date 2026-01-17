@@ -3,9 +3,6 @@ package com.hatokuse.grpc;
 import static io.grpc.MethodDescriptor.generateFullMethodName;
 
 /**
- * <pre>
- * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
- * </pre>
  */
 @javax.annotation.Generated(
     value = "by gRPC proto compiler (version 1.67.1)",
@@ -111,6 +108,37 @@ public final class MemberServiceGrpc {
     return getGetLocalCountMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.hatokuse.grpc.DeleteRequest,
+      com.hatokuse.grpc.DeleteResponse> getDeleteMessageMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteMessage",
+      requestType = com.hatokuse.grpc.DeleteRequest.class,
+      responseType = com.hatokuse.grpc.DeleteResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.hatokuse.grpc.DeleteRequest,
+      com.hatokuse.grpc.DeleteResponse> getDeleteMessageMethod() {
+    io.grpc.MethodDescriptor<com.hatokuse.grpc.DeleteRequest, com.hatokuse.grpc.DeleteResponse> getDeleteMessageMethod;
+    if ((getDeleteMessageMethod = MemberServiceGrpc.getDeleteMessageMethod) == null) {
+      synchronized (MemberServiceGrpc.class) {
+        if ((getDeleteMessageMethod = MemberServiceGrpc.getDeleteMessageMethod) == null) {
+          MemberServiceGrpc.getDeleteMessageMethod = getDeleteMessageMethod =
+              io.grpc.MethodDescriptor.<com.hatokuse.grpc.DeleteRequest, com.hatokuse.grpc.DeleteResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteMessage"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.hatokuse.grpc.DeleteRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.hatokuse.grpc.DeleteResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new MemberServiceMethodDescriptorSupplier("DeleteMessage"))
+              .build();
+        }
+      }
+    }
+    return getDeleteMessageMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -156,16 +184,10 @@ public final class MemberServiceGrpc {
   }
 
   /**
-   * <pre>
-   * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
-   * </pre>
    */
   public interface AsyncService {
 
     /**
-     * <pre>
-     * Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
-     * </pre>
      */
     default void storeMessage(com.hatokuse.grpc.MessageRequest request,
         io.grpc.stub.StreamObserver<com.hatokuse.grpc.MessageResponse> responseObserver) {
@@ -185,13 +207,17 @@ public final class MemberServiceGrpc {
         io.grpc.stub.StreamObserver<com.hatokuse.grpc.CountResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetLocalCountMethod(), responseObserver);
     }
+
+    /**
+     */
+    default void deleteMessage(com.hatokuse.grpc.DeleteRequest request,
+        io.grpc.stub.StreamObserver<com.hatokuse.grpc.DeleteResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteMessageMethod(), responseObserver);
+    }
   }
 
   /**
    * Base class for the server implementation of the service MemberService.
-   * <pre>
-   * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
-   * </pre>
    */
   public static abstract class MemberServiceImplBase
       implements io.grpc.BindableService, AsyncService {
@@ -203,9 +229,6 @@ public final class MemberServiceGrpc {
 
   /**
    * A stub to allow clients to do asynchronous rpc calls to service MemberService.
-   * <pre>
-   * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
-   * </pre>
    */
   public static final class MemberServiceStub
       extends io.grpc.stub.AbstractAsyncStub<MemberServiceStub> {
@@ -221,9 +244,6 @@ public final class MemberServiceGrpc {
     }
 
     /**
-     * <pre>
-     * Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
-     * </pre>
      */
     public void storeMessage(com.hatokuse.grpc.MessageRequest request,
         io.grpc.stub.StreamObserver<com.hatokuse.grpc.MessageResponse> responseObserver) {
@@ -246,13 +266,18 @@ public final class MemberServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetLocalCountMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void deleteMessage(com.hatokuse.grpc.DeleteRequest request,
+        io.grpc.stub.StreamObserver<com.hatokuse.grpc.DeleteResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteMessageMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
    * A stub to allow clients to do synchronous rpc calls to service MemberService.
-   * <pre>
-   * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
-   * </pre>
    */
   public static final class MemberServiceBlockingStub
       extends io.grpc.stub.AbstractBlockingStub<MemberServiceBlockingStub> {
@@ -268,9 +293,6 @@ public final class MemberServiceGrpc {
     }
 
     /**
-     * <pre>
-     * Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
-     * </pre>
      */
     public com.hatokuse.grpc.MessageResponse storeMessage(com.hatokuse.grpc.MessageRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
@@ -290,13 +312,17 @@ public final class MemberServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetLocalCountMethod(), getCallOptions(), request);
     }
+
+    /**
+     */
+    public com.hatokuse.grpc.DeleteResponse deleteMessage(com.hatokuse.grpc.DeleteRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteMessageMethod(), getCallOptions(), request);
+    }
   }
 
   /**
    * A stub to allow clients to do ListenableFuture-style rpc calls to service MemberService.
-   * <pre>
-   * Servis Tanımı: Üye (Member) sunucusu bu fonksiyonları dışarıya açar
-   * </pre>
    */
   public static final class MemberServiceFutureStub
       extends io.grpc.stub.AbstractFutureStub<MemberServiceFutureStub> {
@@ -312,9 +338,6 @@ public final class MemberServiceGrpc {
     }
 
     /**
-     * <pre>
-     * Lider, bir üyeye mesajı kaydetmesi için bu fonksiyonu çağırır
-     * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.hatokuse.grpc.MessageResponse> storeMessage(
         com.hatokuse.grpc.MessageRequest request) {
@@ -337,11 +360,20 @@ public final class MemberServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetLocalCountMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.hatokuse.grpc.DeleteResponse> deleteMessage(
+        com.hatokuse.grpc.DeleteRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteMessageMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_STORE_MESSAGE = 0;
   private static final int METHODID_RETRIEVE_MESSAGE = 1;
   private static final int METHODID_GET_LOCAL_COUNT = 2;
+  private static final int METHODID_DELETE_MESSAGE = 3;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -371,6 +403,10 @@ public final class MemberServiceGrpc {
         case METHODID_GET_LOCAL_COUNT:
           serviceImpl.getLocalCount((com.hatokuse.grpc.CountRequest) request,
               (io.grpc.stub.StreamObserver<com.hatokuse.grpc.CountResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_MESSAGE:
+          serviceImpl.deleteMessage((com.hatokuse.grpc.DeleteRequest) request,
+              (io.grpc.stub.StreamObserver<com.hatokuse.grpc.DeleteResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -411,6 +447,13 @@ public final class MemberServiceGrpc {
               com.hatokuse.grpc.CountRequest,
               com.hatokuse.grpc.CountResponse>(
                 service, METHODID_GET_LOCAL_COUNT)))
+        .addMethod(
+          getDeleteMessageMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.hatokuse.grpc.DeleteRequest,
+              com.hatokuse.grpc.DeleteResponse>(
+                service, METHODID_DELETE_MESSAGE)))
         .build();
   }
 
@@ -462,6 +505,7 @@ public final class MemberServiceGrpc {
               .addMethod(getStoreMessageMethod())
               .addMethod(getRetrieveMessageMethod())
               .addMethod(getGetLocalCountMethod())
+              .addMethod(getDeleteMessageMethod())
               .build();
         }
       }

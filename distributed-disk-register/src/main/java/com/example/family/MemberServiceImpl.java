@@ -12,6 +12,9 @@ import com.hatokuse.grpc.RetrieveResponse;
 import com.hatokuse.grpc.CountRequest;
 import com.hatokuse.grpc.CountResponse;
 
+import com.hatokuse.grpc.DeleteRequest;
+import com.hatokuse.grpc.DeleteResponse;
+
 
 public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
 
@@ -83,6 +86,27 @@ public class MemberServiceImpl extends MemberServiceGrpc.MemberServiceImplBase {
         int c = diskStorage.countMessages();
         responseObserver.onNext(CountResponse.newBuilder().setCount(c).build());
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void deleteMessage(DeleteRequest request,
+                              StreamObserver<DeleteResponse> responseObserver) {
+        try {
+            int id = request.getId();
+            diskStorage.delete(id);
+
+            responseObserver.onNext(DeleteResponse.newBuilder()
+                    .setSuccess(true)
+                    .setMessage("OK")
+                    .build());
+        } catch (Exception e) {
+            responseObserver.onNext(DeleteResponse.newBuilder()
+                    .setSuccess(false)
+                    .setMessage("ERROR: " + e.getMessage())
+                    .build());
+        } finally {
+            responseObserver.onCompleted();
+        }
     }
 
 }

@@ -36,6 +36,7 @@ public class DiskStorage {
 
     public void delete(int id) throws IOException {
         Path path = baseDir.resolve(id + ".msg");
+        //Path path = Paths.get(BASE_DIR, id + ".msg");
         Files.deleteIfExists(path);
     }
 

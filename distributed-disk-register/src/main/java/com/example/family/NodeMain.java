@@ -27,9 +27,13 @@ import com.hatokuse.grpc.MessageResponse;
 import com.hatokuse.grpc.RetrieveRequest;
 import com.hatokuse.grpc.RetrieveResponse;
 
+import com.hatokuse.grpc.DeleteRequest;
+import com.hatokuse.grpc.DeleteResponse;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
+
 
 public class NodeMain {
 
@@ -151,6 +155,7 @@ public class NodeMain {
 
 
                             if (replicas.size() < tolerance) {
+                                rollbackReplicas(id, replicas);
                                 result = "ERROR";
                             } else {
 
@@ -576,4 +581,34 @@ public class NodeMain {
             System.out.println("======================================================");
         }, 7, 10, TimeUnit.SECONDS);
     }
+
+
+    private static void rollbackReplicas(int id, List<NodeInfo> writtenNodes) {
+        for (NodeInfo n : writtenNodes) {
+            ManagedChannel channel = null;
+            try {
+                channel = ManagedChannelBuilder
+                        .forAddress(n.getHost(), n.getPort())
+                        .usePlaintext()
+                        .build();
+
+                MemberServiceGrpc.MemberServiceBlockingStub stub =
+                        MemberServiceGrpc.newBlockingStub(channel);
+
+                DeleteResponse res = stub.deleteMessage(
+                        DeleteRequest.newBuilder().setId(id).build()
+                );
+
+                System.out.printf("ROLLBACK delete %d at %s:%d -> %s%n",
+                        id, n.getHost(), n.getPort(), res.getMessage());
+
+            } catch (Exception e) {
+                System.err.printf("ROLLBACK failed at %s:%d (%s)%n",
+                        n.getHost(), n.getPort(), e.getMessage());
+            } finally {
+                if (channel != null) channel.shutdownNow();
+            }
+        }
+    }
+
 }

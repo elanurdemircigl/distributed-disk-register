@@ -9,29 +9,17 @@ public interface MessageResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <pre>
-   * Kayıt başarılı mı?
-   * </pre>
-   *
    * <code>bool success = 1;</code>
    * @return The success.
    */
   boolean getSuccess();
 
   /**
-   * <pre>
-   * Hata varsa açıklaması, yoksa "OK"
-   * </pre>
-   *
    * <code>string message = 2;</code>
    * @return The message.
    */
   java.lang.String getMessage();
   /**
-   * <pre>
-   * Hata varsa açıklaması, yoksa "OK"
-   * </pre>
-   *
    * <code>string message = 2;</code>
    * @return The bytes for message.
    */
